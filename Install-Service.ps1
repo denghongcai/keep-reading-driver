@@ -42,7 +42,7 @@ try {
 
     # Create service
     Write-Host "Installing service..." -ForegroundColor Green
-    $BinaryPath = "`"$ExePath`" --drive $Drive --interval $Interval"
+    $BinaryPath = "`"$ExePath`" --drive $Drive --interval $Interval --service"
     
     sc.exe create $ServiceName binPath= $BinaryPath DisplayName= $DisplayName start= auto
     sc.exe description $ServiceName $Description

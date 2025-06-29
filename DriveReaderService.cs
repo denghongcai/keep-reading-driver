@@ -9,12 +9,14 @@ namespace KeepReadingDriver
     public class DriveReaderService : ServiceBase
     {
         private readonly DriveReaderOptions _options;
+        private readonly bool _isRunningAsService;
         private Timer _timer;
         private bool _isRunning;
 
-        public DriveReaderService(DriveReaderOptions options)
+        public DriveReaderService(DriveReaderOptions options, bool isRunningAsService = false)
         {
             _options = options ?? new DriveReaderOptions();
+            _isRunningAsService = isRunningAsService;
             ServiceName = "KeepReadingDriver";
             
             // 确保事件日志源存在
@@ -204,7 +206,7 @@ namespace KeepReadingDriver
                 var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 var logMessage = $"{timestamp} - {message}";
 
-                if (Environment.UserInteractive)
+                if (!_isRunningAsService)
                 {
                     // 控制台模式
                     if (isError)

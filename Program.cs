@@ -6,20 +6,23 @@ namespace KeepReadingDriver
 {
     class Program
     {
+        private static bool _isRunningAsService = false;
+        private static DriveReaderOptions _options;
+        
         static void Main(string[] args)
         {
             try
             {
-                var options = ParseCommandLineArgs(args);
+                _options = ParseCommandLineArgs(args);
 
-                if (Environment.UserInteractive)
+                if (!_options.RunAsService)
                 {
                     // 以控制台模式运行（调试用）
                     Console.WriteLine("Keep Reading Driver - Console Mode");
-                    Console.WriteLine($"Monitoring drive: {options.DriveLetter}, Interval: {options.IntervalSeconds} seconds");
+                    Console.WriteLine($"Monitoring drive: {_options.DriveLetter}, Interval: {_options.IntervalSeconds} seconds");
                     Console.WriteLine("Press Ctrl+C to exit...");
 
-                    var service = new DriveReaderService(options);
+                    var service = new DriveReaderService(_options, false); // 传递 false 表示控制台模式
                     var exitRequested = false;
                     
                     service.StartConsole();
@@ -45,13 +48,14 @@ namespace KeepReadingDriver
                 else
                 {
                     // 作为 Windows 服务运行
-                    ServiceBase[] servicesToRun = { new DriveReaderService(options) };
+                    _isRunningAsService = true;
+                    ServiceBase[] servicesToRun = { new DriveReaderService(_options, true) }; // 传递 true 表示服务模式
                     ServiceBase.Run(servicesToRun);
                 }
             }
             catch (Exception ex)
             {
-                if (Environment.UserInteractive)
+                if (!_isRunningAsService && (_options == null || !_options.RunAsService))
                 {
                     Console.WriteLine($"Error: {ex.Message}");
                     Console.WriteLine("Press any key to exit...");
@@ -97,6 +101,10 @@ namespace KeepReadingDriver
                             options.IntervalSeconds = interval;
                         }
                         break;
+                    case "-s":
+                    case "--service":
+                        options.RunAsService = true;
+                        break;
                     case "-h":
                     case "--help":
                         Console.WriteLine("KeepReadingDriver - Windows Service to prevent hard drive sleep");
@@ -104,6 +112,7 @@ namespace KeepReadingDriver
                         Console.WriteLine("Options:");
                         Console.WriteLine("  -d, --drive <letter>     Drive letter to read (default: C)");
                         Console.WriteLine("  -i, --interval <seconds> Interval in seconds (default: 300)");
+                        Console.WriteLine("  -s, --service           Run as Windows Service (used by Service Control Manager)");
                         Console.WriteLine("  -h, --help              Show this help message");
                         Environment.Exit(0);
                         break;
