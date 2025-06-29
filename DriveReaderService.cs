@@ -14,20 +14,50 @@ namespace KeepReadingDriver
 
         public DriveReaderService(DriveReaderOptions options)
         {
-            _options = options;
+            _options = options ?? new DriveReaderOptions();
             ServiceName = "KeepReadingDriver";
+            
+            // 确保事件日志源存在
+            try
+            {
+                if (!EventLog.SourceExists("KeepReadingDriver"))
+                {
+                    EventLog.CreateEventSource("KeepReadingDriver", "Application");
+                }
+            }
+            catch
+            {
+                // 忽略创建事件日志源的错误
+            }
         }
 
         protected override void OnStart(string[] args)
         {
-            WriteLog($"Keep Reading Driver Service started. Monitoring drive: {_options.DriveLetter}, Interval: {_options.IntervalSeconds} seconds");
-            StartService();
+            try
+            {
+                WriteLog($"Keep Reading Driver Service starting. Monitoring drive: {_options.DriveLetter}, Interval: {_options.IntervalSeconds} seconds");
+                StartService();
+                WriteLog("Keep Reading Driver Service started successfully.");
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Error starting service: {ex.Message}", true);
+                throw; // 重新抛出异常，让服务管理器知道启动失败
+            }
         }
 
         protected override void OnStop()
         {
-            WriteLog("Keep Reading Driver Service stopped.");
-            StopService();
+            try
+            {
+                WriteLog("Keep Reading Driver Service stopping.");
+                StopService();
+                WriteLog("Keep Reading Driver Service stopped successfully.");
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Error stopping service: {ex.Message}", true);
+            }
         }
 
         public void StartConsole()
@@ -44,30 +74,51 @@ namespace KeepReadingDriver
 
         private void StartService()
         {
-            _isRunning = true;
-
-            // 确保盘符格式正确
-            var drivePath = _options.DriveLetter.EndsWith(":") ? _options.DriveLetter : _options.DriveLetter + ":";
-            if (!drivePath.EndsWith("\\"))
+            try
             {
-                drivePath += "\\";
-            }
+                _isRunning = true;
 
-            // 检查驱动器是否存在
-            if (!Directory.Exists(drivePath))
+                // 确保盘符格式正确
+                var drivePath = _options.DriveLetter.EndsWith(":") ? _options.DriveLetter : _options.DriveLetter + ":";
+                if (!drivePath.EndsWith("\\"))
+                {
+                    drivePath += "\\";
+                }
+
+                // 检查驱动器是否存在
+                if (!Directory.Exists(drivePath))
+                {
+                    throw new DirectoryNotFoundException($"Drive {drivePath} does not exist or is not accessible.");
+                }
+
+                WriteLog($"Drive {drivePath} is accessible, starting monitoring...");
+
+                // 创建定时器
+                _timer = new Timer(TimerCallback, drivePath, TimeSpan.Zero, TimeSpan.FromSeconds(_options.IntervalSeconds));
+                
+                WriteLog($"Timer created with interval: {_options.IntervalSeconds} seconds");
+            }
+            catch (Exception ex)
             {
-                WriteLog($"Error: Drive {drivePath} does not exist or is not accessible.");
-                return;
+                _isRunning = false;
+                WriteLog($"Failed to start service: {ex.Message}", true);
+                throw;
             }
-
-            // 创建定时器
-            _timer = new Timer(TimerCallback, drivePath, TimeSpan.Zero, TimeSpan.FromSeconds(_options.IntervalSeconds));
         }
 
         private void StopService()
         {
-            _isRunning = false;
-            _timer?.Dispose();
+            try
+            {
+                _isRunning = false;
+                _timer?.Dispose();
+                _timer = null;
+                WriteLog("Service stopped successfully.");
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Error during service stop: {ex.Message}", true);
+            }
         }
 
         private void TimerCallback(object state)
@@ -148,30 +199,57 @@ namespace KeepReadingDriver
 
         private void WriteLog(string message, bool isError = false)
         {
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            var logMessage = $"{timestamp} - {message}";
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                var logMessage = $"{timestamp} - {message}";
 
-            if (Environment.UserInteractive)
-            {
-                // 控制台模式
-                Console.WriteLine(logMessage);
-            }
-            else
-            {
-                // 服务模式，写入事件日志
-                try
+                if (Environment.UserInteractive)
                 {
-                    using (EventLog eventLog = new EventLog("Application"))
+                    // 控制台模式
+                    if (isError)
                     {
-                        eventLog.Source = "KeepReadingDriver";
-                        var entryType = isError ? EventLogEntryType.Error : EventLogEntryType.Information;
-                        eventLog.WriteEntry(logMessage, entryType);
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"ERROR: {logMessage}");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        Console.WriteLine(logMessage);
                     }
                 }
-                catch
+                else
                 {
-                    // 如果无法写入事件日志，忽略错误
+                    // 服务模式，写入事件日志
+                    try
+                    {
+                        using (EventLog eventLog = new EventLog("Application"))
+                        {
+                            eventLog.Source = "KeepReadingDriver";
+                            var entryType = isError ? EventLogEntryType.Error : EventLogEntryType.Information;
+                            eventLog.WriteEntry(logMessage, entryType);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 如果无法写入事件日志，尝试写入到文件
+                        try
+                        {
+                            var logFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), 
+                                                     "KeepReadingDriver", "service.log");
+                            Directory.CreateDirectory(Path.GetDirectoryName(logFile));
+                            File.AppendAllText(logFile, $"{logMessage} (EventLog Error: {ex.Message})\r\n");
+                        }
+                        catch
+                        {
+                            // 最后的备选方案：什么都不做，避免服务崩溃
+                        }
+                    }
                 }
+            }
+            catch
+            {
+                // 确保日志记录不会导致服务崩溃
             }
         }
     }
