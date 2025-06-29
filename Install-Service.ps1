@@ -47,6 +47,21 @@ try {
     sc.exe create $ServiceName binPath= $BinaryPath DisplayName= $DisplayName start= auto
     sc.exe description $ServiceName $Description
     
+    # Create event log source
+    Write-Host "Creating event log source..." -ForegroundColor Green
+    try {
+        if (-not [System.Diagnostics.EventLog]::SourceExists("KeepReadingDriver")) {
+            [System.Diagnostics.EventLog]::CreateEventSource("KeepReadingDriver", "Application")
+            Write-Host "Event log source created successfully." -ForegroundColor Green
+        } else {
+            Write-Host "Event log source already exists." -ForegroundColor Yellow
+        }
+    }
+    catch {
+        Write-Host "Warning: Could not create event log source: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "Service will use file logging instead." -ForegroundColor Yellow
+    }
+    
     # Start service
     Write-Host "Starting service..." -ForegroundColor Green
     Start-Service -Name $ServiceName

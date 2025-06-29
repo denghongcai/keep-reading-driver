@@ -33,6 +33,20 @@ try {
     Write-Host "Removing service..." -ForegroundColor Yellow
     sc.exe delete $ServiceName
     
+    # Remove event log source
+    Write-Host "Removing event log source..." -ForegroundColor Yellow
+    try {
+        if ([System.Diagnostics.EventLog]::SourceExists("KeepReadingDriver")) {
+            [System.Diagnostics.EventLog]::DeleteEventSource("KeepReadingDriver")
+            Write-Host "Event log source removed successfully." -ForegroundColor Green
+        } else {
+            Write-Host "Event log source does not exist." -ForegroundColor Yellow
+        }
+    }
+    catch {
+        Write-Host "Warning: Could not remove event log source: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+    
     Write-Host "Service '$ServiceName' has been successfully uninstalled." -ForegroundColor Green
 }
 catch {
