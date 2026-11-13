@@ -18,7 +18,7 @@ if %errorlevel% neq 0 (
 )
 
 echo 编译和发布完成！
-echo 可执行文件位置: bin\Release\netcoreapp2.1\win-x64\publish\KeepReadingDriver.exe
+echo 可执行文件位置: bin\Release\net10.0\win-x64\publish\KeepReadingDriver.exe
 echo.
 echo 下一步操作：
 echo 1. 以管理员身份运行 PowerShell

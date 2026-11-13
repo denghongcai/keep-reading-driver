@@ -19,9 +19,14 @@
 # 编译
 dotnet build -c Release
 
-# 发布自包含可执行文件
+# 发布自包含可执行文件（x64）
 dotnet publish -c Release -r win-x64 --self-contained
+
+# 发布自包含可执行文件（ARM64）
+dotnet publish -c Release -r win-arm64 --self-contained
 ```
+
+也可以直接从 [Releases](https://github.com/denghongcai/keep-reading-driver/releases) 下载对应架构的发布包。
 
 ### 2. 安装服务
 
@@ -55,13 +60,13 @@ Stop-Service -Name KeepReadingDriver
 
 ```powershell
 # 默认参数运行
-.\bin\Release\netcoreapp2.1\win-x64\publish\KeepReadingDriver.exe
+.\bin\Release\net10.0\win-x64\publish\KeepReadingDriver.exe
 
 # 自定义参数运行
-.\bin\Release\netcoreapp2.1\win-x64\publish\KeepReadingDriver.exe --drive D --interval 180
+.\bin\Release\net10.0\win-x64\publish\KeepReadingDriver.exe --drive D --interval 180
 
 # 查看帮助
-.\bin\Release\netcoreapp2.1\win-x64\publish\KeepReadingDriver.exe --help
+.\bin\Release\net10.0\win-x64\publish\KeepReadingDriver.exe --help
 ```
 
 ## 命令行参数
@@ -96,8 +101,8 @@ Stop-Service -Name KeepReadingDriver
 
 ## 系统要求
 
-- Windows 10/11 或 Windows Server 2016+
-- .NET Core 2.1 Runtime（如果使用发布的自包含版本则不需要）
+- Windows 10/11 或 Windows Server 2016+（x64 / ARM64）
+- .NET 10 SDK（仅编译需要；自包含发布版无需安装运行时）
 
 ## 故障排除
 

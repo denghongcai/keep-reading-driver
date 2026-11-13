@@ -18,7 +18,7 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 
 # Get current script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ExePath = Join-Path $ScriptDir "bin\Release\netcoreapp2.1\win-x64\publish\KeepReadingDriver.exe"
+$ExePath = Join-Path $ScriptDir "bin\Release\net10.0\win-x64\publish\KeepReadingDriver.exe"
 
 # Check if executable file exists
 if (-not (Test-Path $ExePath)) {
